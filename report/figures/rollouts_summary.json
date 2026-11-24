@@ -1,0 +1,95 @@
+[
+  {
+    "file": "rollout-1795539517.jsonl",
+    "figure": "rollout_healthy_1795539518.png",
+    "scenario": "healthy",
+    "outcome": "passed",
+    "seconds": 440.71957635879517,
+    "guardrails": null,
+    "weight": null,
+    "n_b": null,
+    "details": null,
+    "psi_threshold": 0.15,
+    "checks": 87
+  },
+  {
+    "file": "rollout-1795540020.jsonl",
+    "figure": "rollout_latency_1795540020.png",
+    "scenario": "latency",
+    "outcome": "rollback",
+    "seconds": 202.6377649307251,
+    "guardrails": [
+      "latency_p99"
+    ],
+    "weight": 0.01,
+    "n_b": 314.0,
+    "details": {
+      "latency_p99": {
+        "value": 0.08837142857142859,
+        "threshold": 0.052158004021447726,
+        "v1": 0.006751367292225207,
+        "breach": true
+      }
+    },
+    "psi_threshold": 0.15,
+    "checks": 40
+  },
+  {
+    "file": "rollout-1795540282.jsonl",
+    "figure": "rollout_errors_1795540282.png",
+    "scenario": "errors",
+    "outcome": "rollback",
+    "seconds": 45.679367542266846,
+    "guardrails": [
+      "error_rate"
+    ],
+    "weight": 0.01,
+    "n_b": 65.0,
+    "details": {
+      "error_rate": {
+        "value": 0.05978304901651889,
+        "threshold": 0.01,
+        "p_value": 9.88041761951025e-24,
+        "exact_p_value": 5.901567368272445e-06,
+        "z": 9.974240052933121,
+        "breach": true
+      }
+    },
+    "psi_threshold": 0.15,
+    "checks": 9
+  },
+  {
+    "file": "rollout-1795540396.jsonl",
+    "figure": "rollout_schema_1795540396.png",
+    "scenario": "schema",
+    "outcome": "rollback",
+    "seconds": 354.30041122436523,
+    "guardrails": [
+      "score_psi"
+    ],
+    "weight": 0.05,
+    "n_b": 546.0,
+    "details": {
+      "score_psi": {
+        "value": 0.18670813381175394,
+        "threshold": 0.15,
+        "breach": true
+      }
+    },
+    "psi_threshold": 0.15,
+    "checks": 70
+  },
+  {
+    "file": "rollout-1795540819.jsonl",
+    "figure": "rollout_healthy_1795540819.png",
+    "scenario": "healthy",
+    "outcome": "passed",
+    "seconds": 438.28872060775757,
+    "guardrails": null,
+    "weight": null,
+    "n_b": null,
+    "details": null,
+    "psi_threshold": 0.15,
+    "checks": 86
+  }
+]

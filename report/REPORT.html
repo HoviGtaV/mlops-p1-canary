@@ -1,0 +1,289 @@
+<!doctype html><html><head><meta charset='utf-8'><title>P1 Canary report</title><style>body{font-family:'Segoe UI',Arial,sans-serif;max-width:820px;margin:24px auto;font-size:10.5pt;line-height:1.45;color:#1a1a1a}
+h1{font-size:20pt;border-bottom:2px solid #1f4e79;padding-bottom:4px;color:#1f4e79}h2{font-size:14pt;color:#1f4e79;margin-top:22px}h3{font-size:11.5pt}
+table{border-collapse:collapse;margin:8px 0;font-size:9.5pt}th,td{border:1px solid #bbb;padding:3px 7px;text-align:left}th{background:#e8eef5}
+img{max-width:100%;display:block;margin:10px auto;page-break-inside:avoid}code{background:#f2f2f2;padding:0 3px;font-size:9pt}
+@page{size:A4;margin:14mm}</style></head><body><h1>P1 — Canary: safe rollout of a new readmission model</h1>
+<p><strong>MLOps, ESIB, Fall 2026</strong> · Dataset: UCI Diabetes 130-US hospitals · Repository: this folder</p>
+<h2>1. Goal and decision</h2>
+<p>v1 (logistic regression) predicts whether a diabetic patient will be readmitted within 30 days.
+v2 (gradient boosting) is better offline but about ten times heavier. We built a canary release
+that moves patients to v2 in four steps (1% → 5% → 25% → 100%), checks four guardrails from
+Prometheus every 5 seconds, and rolls back automatically.</p>
+<p><strong>Decision.</strong> With a healthy v2 the rollout <strong>passed</strong> all four steps twice (≈ 7 minutes each) and v2
+served 100% of traffic. Each injected failure was <strong>rolled back by the guardrail designed for it</strong>,
+at 1% or 5% traffic. The canary shows v2 is <strong>safe</strong> to serve; it does not show v2 is <strong>better</strong>
+(question 3), so <code>@champion</code> stays on v1 until a human promotes v2 after an A/B test. The model
+version is tagged <code>canary_result=passed</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Scenario (flag on v2)</th>
+<th>Outcome</th>
+<th>Guardrail and value</th>
+<th>Traffic, v2 requests, time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>healthy (2 runs)</td>
+<td>passed, 100% on v2</td>
+<td>all within limits</td>
+<td>441 s and 438 s</td>
+</tr>
+<tr>
+<td>+50 ms latency</td>
+<td>rolled back</td>
+<td>p99 = 88 ms &gt; limit 52 ms</td>
+<td>1%, 314 requests, 203 s</td>
+</tr>
+<tr>
+<td>5% HTTP 500</td>
+<td>rolled back</td>
+<td>error gap 6.0 pts, z = 10.0, exact p = 6·10⁻⁶</td>
+<td>1%, 65 requests, 46 s</td>
+</tr>
+<tr>
+<td>silent schema bug (HTTP 200)</td>
+<td>rolled back</td>
+<td>PSI = 0.187 &gt; 0.15</td>
+<td>5%, 546 requests, 354 s</td>
+</tr>
+</tbody>
+</table>
+<h2>2. System</h2>
+<p>All services run in Docker Compose on a laptop CPU (README for the diagram and commands).</p>
+<ul>
+<li><strong>Router</strong> (FastAPI, ours): sends user <code>u</code> to v2 when <code>sha256(u) mod 10,000 &lt; weight × 10,000</code>.
+  Assignment is sticky and monotonic: when the weight grows, users already on v2 stay there.
+  It measures what users see: end-to-end latency and errors.</li>
+<li><strong>variant-a / variant-b</strong>: the same image; they load <code>models:/readmission@champion</code> and
+  <code>@challenger</code> from the MLflow registry. Failure flags: <code>EXTRA_LATENCY_MS</code>, <code>ERROR_RATE</code>,
+  <code>SCHEMA_BUG</code>. 8 worker processes each.</li>
+<li><strong>Simulator</strong>: replays the test split (patients never seen in training) at 150 requests/s, with
+  <code>patient_nbr</code> as a stable user id.</li>
+<li><strong>Prometheus</strong> scrapes every 2 s; <strong>Grafana</strong> shows A and B side by side. Every metric has a
+  <code>variant</code> label.</li>
+<li><strong>Controller</strong>: a Python loop that sets the router weight, queries the Prometheus HTTP API (exact
+  counter differences between the step start and now) and writes a JSON log of every check.</li>
+</ul>
+<p><strong>Data and models.</strong> Encounters ending in death or hospice are removed (they cannot be readmitted).
+Split by <code>patient_nbr</code>, 70/15/15, seed 42: 69,623 / 14,887 / 14,833 encounters, 11.3% positives.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>v1 logistic regression</th>
+<th>v2 gradient boosting</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Validation AUC</td>
+<td>0.663</td>
+<td><strong>0.676</strong></td>
+</tr>
+<tr>
+<td>Test AUC</td>
+<td>0.653</td>
+<td><strong>0.663</strong></td>
+</tr>
+<tr>
+<td>Recall in top 15% (val)</td>
+<td>0.300</td>
+<td>0.313</td>
+</tr>
+<tr>
+<td>One prediction, p50 / p99</td>
+<td>0.9 / 2.4 ms</td>
+<td>10.3 / 29.5 ms</td>
+</tr>
+</tbody>
+</table>
+<p><img alt="Offline comparison" src="figures/offline_models.png" /></p>
+<h2>3. Guardrails and why they look like this</h2>
+<table>
+<thead>
+<tr>
+<th>Guardrail</th>
+<th>Rule</th>
+<th>Minimum v2 requests</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>error_rate</td>
+<td>one-sided two-proportion z-test p &lt; 0.001, gap ≥ 1 point, exact binomial test agrees</td>
+<td>50</td>
+</tr>
+<tr>
+<td>latency_p99</td>
+<td>p99(v2) ≤ 1.1 × (p99(v1) + 1.5 × 27.1 ms)</td>
+<td>300</td>
+</tr>
+<tr>
+<td>score_psi</td>
+<td>PSI(v2 scores, v1 scores) ≤ 0.15, from 5% traffic</td>
+<td>500</td>
+</tr>
+<tr>
+<td>invalid_scores</td>
+<td>NaN / out-of-range share ≤ 0.1%</td>
+<td>20</td>
+</tr>
+</tbody>
+</table>
+<p>A breach must appear on <strong>two consecutive checks</strong>. Rollback = router weight 0; aliases unchanged.
+Both variants have a simulated background error rate of 0.2% (a flaky dependency); without it v1
+has zero errors and the z-test has nothing to compare against.</p>
+<p>Three choices go beyond the literal subject. Each one came from a <strong>real false rollback of a healthy
+v2</strong> while tuning (5 of our first 6 healthy runs were rolled back):</p>
+<ol>
+<li><strong>Latency allowance.</strong> v2's p99 is ~30 ms against ~6 ms for v1 <em>by design</em>. The literal rule
+   p99(v2) ≤ 1.1 × p99(v1) ≈ 7 ms rolls back every healthy v2 (100% in simulation). The extra cost
+   v2 was accepted for (27.1 ms, measured offline and stored as a tag on the model version) is added,
+   with a 1.5 headroom because the idle offline benchmark under-estimates load (live p99 reached
+   ~40 ms at 25% traffic). Limit ≈ 52 ms. Cost: a regression smaller than ~15 ms is not caught.
+   The literal rule remains a setting (<code>LATENCY_ALLOW_OFFLINE_OVERHEAD=0</code>).</li>
+<li><strong>Exact confirmation of the z-test.</strong> One background error in 58 v2 requests gave a "significant"
+   z-test (p &lt; 0.01) and rolled back a healthy v2: the normal approximation fails with rare events
+   and small samples. The exact binomial probability of that event is 11%. We keep the z-test and
+   require the exact test to agree.</li>
+<li><strong>PSI from 5% traffic.</strong> See below.</li>
+</ol>
+<p><strong>Why PSI starts at 5% and the threshold is 0.15.</strong> At 1% traffic v2 serves only ~100 patients, so
+its score distribution differs from v1's because the <em>patients</em> differ. Simulating thousands of
+random patient subsets:</p>
+<table>
+<thead>
+<tr>
+<th>Traffic, v2 requests</th>
+<th>Healthy PSI p99</th>
+<th>Schema-bug PSI p5</th>
+<th>False alarms at 0.15</th>
+<th>Detection at 0.15</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1%, 300</td>
+<td>0.46</td>
+<td>0.21</td>
+<td><strong>67%</strong></td>
+<td>99%</td>
+</tr>
+<tr>
+<td>5%, 500</td>
+<td>0.14</td>
+<td>0.16</td>
+<td>0.5%</td>
+<td>96%</td>
+</tr>
+<tr>
+<td>25%, 1,000</td>
+<td>0.08</td>
+<td>0.15</td>
+<td>0%</td>
+<td>93%</td>
+</tr>
+</tbody>
+</table>
+<p><img alt="PSI calibration" src="figures/psi_calibration.png" /></p>
+<h2>4. The three injected failures</h2>
+<p><strong>Latency (+50 ms).</strong> p99 of v2 jumped to 88 ms while the limit was 52 ms; rolled back at 1% after
+314 v2 requests. <strong>Errors (5% HTTP 500).</strong> Rolled back at 1% after 65 v2 requests (46 s): only
+about 65 patient requests were exposed. <strong>Silent schema bug.</strong> <code>number_inpatient</code> (past inpatient
+visits, the strongest predictor) is renamed upstream; the service imputes the missing column and
+answers HTTP 200. Errors and latency stay normal; v2's mean predicted risk drops from 11.2% to 8.9%
+and its test AUC from 0.663 to 0.623. Only the score PSI catches it: 0.187 at 5% traffic.</p>
+<p><img alt="Schema bug in Grafana" src="figures/grafana_schema.png" /></p>
+<p><img alt="Schema bug timeline" src="figures/rollout_schema.png" /></p>
+<p>Other evidence: <code>figures/grafana_{healthy,latency,errors}.png</code> and <code>figures/rollout_*.png</code>.</p>
+<h2>5. Report questions</h2>
+<h3>Q1. At 1% traffic, how many requests are needed before the z-test detects the injected error rate?</h3>
+<p>Baseline error 0.2% on both variants; v2 with the bug fails 5.2%. With v1 getting 99× more traffic
+(its rate is essentially known), the one-sided z-test at α = 0.001 and 80% power needs <strong>47 v2
+requests</strong> (power formula). Our full rule (≥ 50 requests, gap ≥ 1 point, exact test, two
+consecutive checks) needs a median of <strong>67 requests</strong> in 4,000 simulated canaries (90th percentile
+129), i.e. <strong>~45 seconds</strong> at 1.5 v2 requests/s. Live run: <strong>65 requests, 46 s</strong>. The number grows
+fast as the injected error shrinks: +2 points needs 181 requests, +1 point 548.</p>
+<p><img alt="Q1 detection curve" src="figures/q1_detection_curve.png" /></p>
+<h3>Q2. How often does the controller roll back a healthy v2?</h3>
+<p>Monte Carlo of 1,000 healthy rollouts per rule, each request bootstrapped from real traffic of the
+two healthy runs (error flag, end-to-end latency and score), with the controller's schedule:</p>
+<table>
+<thead>
+<tr>
+<th>Rule (cumulative)</th>
+<th>False rollbacks of a healthy v2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Literal rules: p99 ≤ 1.1 × v1, α = 0.05, 1 breach, PSI &gt; 0.10</td>
+<td><strong>100%</strong> (latency)</td>
+</tr>
+<tr>
+<td>+ allow v2's known extra latency</td>
+<td>100% (mostly PSI)</td>
+</tr>
+<tr>
+<td>+ minimum samples per guardrail</td>
+<td>93%</td>
+</tr>
+<tr>
+<td>+ PSI threshold = offline baseline + 0.10</td>
+<td>89%</td>
+</tr>
+<tr>
+<td>+ α = 0.01 and gap ≥ 1 point</td>
+<td>65%</td>
+</tr>
+<tr>
+<td>+ 2 consecutive breaches</td>
+<td>50%</td>
+</tr>
+<tr>
+<td>+ exact binomial confirmation</td>
+<td>43%</td>
+</tr>
+<tr>
+<td>+ PSI from 5% traffic, n ≥ 500, threshold 0.15</td>
+<td>4.3%</td>
+</tr>
+<tr>
+<td>+ α = 0.001 (≈ 0.05 / 60 checks) — <strong>shipped</strong></td>
+<td><strong>1.0%</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The cause is <strong>repeated testing</strong>: a rollout runs ~60–90 checks, and a 5% false-positive rate per
+check compounds (1 − 0.95⁶⁰ ≈ 95%). With α = 0.05 and a single breach, checking every 1 s rolls
+back 94% of healthy rollouts and every 20 s still 80%; the shipped rule stays at 0.4–1.6% whatever
+the interval. Live, the shipped rule passed both healthy runs. Limit of the simulation: requests are
+drawn independently, so it under-states the patient-clustering effect on PSI (covered by the PSI
+calibration above).</p>
+<p><img alt="Q2 false alarms" src="figures/q2_false_alarms.png" /></p>
+<h3>Q3. Why can't the canary tell you whether v2 is better?</h3>
+<ul>
+<li><strong>The outcome is late.</strong> "Better" means fewer readmissions within 30 days; a canary lasts minutes.
+  The guardrails can only use what is known immediately (errors, latency, score shape).</li>
+<li><strong>The effect is far too small for the sample.</strong> The AUC gain is about 0.01. Even a full A/B test of
+  the call-centre decision needs tens of thousands of patients; the canary gives v2 a few hundred
+  requests at 1–5%.</li>
+<li><strong>It is not a valid experiment design.</strong> The traffic share changes during the run, the steps are
+  short, and the users on v2 are a hash-selected subset, not a planned, balanced, fixed-duration
+  randomised sample with a pre-registered metric.</li>
+<li><strong>The tests are one-sided "not worse" checks.</strong> Passing means "no evidence of harm", never
+  "evidence of improvement". Even the PSI is two-sided only in shape: a <em>better</em> model also has a
+  different score distribution.</li>
+</ul>
+<p>The canary answers "is v2 safe to serve?". "Is v2 better?" needs offline evaluation (done: AUC) and an
+A/B test on the business metric (subject P2).</p>
+<h2>6. Limits and next steps</h2>
+<ul>
+<li>All traffic is simulated; real latency would include the network and the database.</li>
+<li>The latency allowance trades sensitivity (regressions &lt; ~15 ms) for no false alarms.</li>
+<li>Feature-level monitoring (PSI per input) would show the schema bug as a drift of
+  <code>number_inpatient</code> directly, before scores move.</li>
+<li>Promotion of <code>@challenger</code> to <code>@champion</code> is deliberately left to a human.</li>
+</ul></body></html>

@@ -1,0 +1,26 @@
+{
+  "base_error_rate": 0.002,
+  "v2_error_rate": 0.052000000000000005,
+  "weight": 0.01,
+  "alpha": 0.001,
+  "min_diff": 0.01,
+  "formula_n_b_80pct_power": {
+    "0.012": 548,
+    "0.022": 181,
+    "0.052": 47,
+    "0.102": 19
+  },
+  "monte_carlo": {
+    "median_n_b": 67.0,
+    "p90_n_b": 129.0,
+    "detected_share": 1.0,
+    "median_seconds_at_1pct": 44.666666666666664
+  },
+  "live": [
+    {
+      "file": "rollout-1795540282.jsonl",
+      "weight": 0.01,
+      "n_b_at_rollback": 65.0
+    }
+  ]
+}

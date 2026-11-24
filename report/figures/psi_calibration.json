@@ -1,0 +1,53 @@
+{
+  "population_psi": {
+    "v2_vs_v1": 0.021986771328138005,
+    "v2_bug_vs_v1": 0.17386491757322867
+  },
+  "threshold": 0.15,
+  "cases": [
+    {
+      "weight": 0.01,
+      "n_b": 300,
+      "patients_on_v2": 104,
+      "healthy_p50": 0.17689422221451595,
+      "healthy_p99": 0.4037968029471409,
+      "bug_p5": 0.21312288916756555,
+      "bug_p50": 0.4222840684470474,
+      "false_alarm_at_threshold": 0.67,
+      "detection_at_threshold": 0.99
+    },
+    {
+      "weight": 0.05,
+      "n_b": 500,
+      "patients_on_v2": 524,
+      "healthy_p50": 0.0750272913401574,
+      "healthy_p99": 0.14034109130582,
+      "bug_p5": 0.1557881416562332,
+      "bug_p50": 0.2393795163730065,
+      "false_alarm_at_threshold": 0.005,
+      "detection_at_threshold": 0.9575
+    },
+    {
+      "weight": 0.05,
+      "n_b": 700,
+      "patients_on_v2": 524,
+      "healthy_p50": 0.0652172822459173,
+      "healthy_p99": 0.13745540999517925,
+      "bug_p5": 0.14759707640834638,
+      "bug_p50": 0.23172557039835545,
+      "false_alarm_at_threshold": 0.0025,
+      "detection_at_threshold": 0.9475
+    },
+    {
+      "weight": 0.25,
+      "n_b": 1000,
+      "patients_on_v2": 2624,
+      "healthy_p50": 0.04348142741958931,
+      "healthy_p99": 0.07901787664743914,
+      "bug_p5": 0.1464488745969425,
+      "bug_p50": 0.2012032504806432,
+      "false_alarm_at_threshold": 0.0,
+      "detection_at_threshold": 0.93
+    }
+  ]
+}

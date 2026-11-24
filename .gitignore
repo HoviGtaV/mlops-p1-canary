@@ -1,0 +1,8 @@
+data/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+report/deck_build/node_modules/
+report/deck_build/render/
+report/deck_build/package-lock.json

@@ -1,0 +1,14 @@
+# One image is shared by every Python service (trainer, model variants, router,
+# simulator, controller, MLflow server). Exact resolved versions are frozen in
+# requirements.lock after the first build.
+mlflow==3.18.0
+scikit-learn==1.9.1
+pandas==3.1.1
+scipy==1.18.1
+fastapi==0.165.0
+uvicorn==0.54.0
+prometheus-client==0.26.0
+httpx==0.28.1
+ucimlrepo==0.0.7
+matplotlib
+pytest

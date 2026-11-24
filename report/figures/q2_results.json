@@ -1,0 +1,123 @@
+{
+  "healthy_rollouts_in_logs": 2,
+  "latency_allowance_ms": 40.66361502029165,
+  "pool_sizes": {
+    "a": 118328,
+    "b": 13534
+  },
+  "observed_error_rate": {
+    "a": 0.0019522006625650734,
+    "b": 0.0024383035318457217
+  },
+  "observed_p99_ms": {
+    "a": 6.281,
+    "b": 34.23339
+  },
+  "psi_threshold_auto": 0.11357375006835763,
+  "rules": [
+    {
+      "rule": "literal rules: p99 <= 1.1 x v1, alpha=0.05, PSI>0.10",
+      "false_rollback_rate": 1.0,
+      "by_guardrail": {
+        "error": 0.0,
+        "latency": 1.0,
+        "psi": 0.0
+      }
+    },
+    {
+      "rule": "+ allow v2's known extra latency",
+      "false_rollback_rate": 1.0,
+      "by_guardrail": {
+        "error": 0.084,
+        "latency": 0.025,
+        "psi": 0.891
+      }
+    },
+    {
+      "rule": "+ minimum samples per guardrail",
+      "false_rollback_rate": 0.933,
+      "by_guardrail": {
+        "error": 0.453,
+        "latency": 0.0,
+        "psi": 0.48
+      }
+    },
+    {
+      "rule": "+ PSI threshold = offline baseline + 0.10",
+      "false_rollback_rate": 0.887,
+      "by_guardrail": {
+        "error": 0.549,
+        "latency": 0.0,
+        "psi": 0.338
+      }
+    },
+    {
+      "rule": "+ alpha=0.01 and gap >= 1 pt",
+      "false_rollback_rate": 0.654,
+      "by_guardrail": {
+        "error": 0.201,
+        "latency": 0.0,
+        "psi": 0.453
+      }
+    },
+    {
+      "rule": "+ 2 consecutive breaches",
+      "false_rollback_rate": 0.497,
+      "by_guardrail": {
+        "error": 0.164,
+        "latency": 0.0,
+        "psi": 0.333
+      }
+    },
+    {
+      "rule": "+ exact binomial confirmation",
+      "false_rollback_rate": 0.43,
+      "by_guardrail": {
+        "error": 0.039,
+        "latency": 0.0,
+        "psi": 0.391
+      }
+    },
+    {
+      "rule": "+ PSI from 5% traffic, n>=500, threshold 0.15",
+      "false_rollback_rate": 0.043,
+      "by_guardrail": {
+        "error": 0.043,
+        "latency": 0.0,
+        "psi": 0.0
+      }
+    },
+    {
+      "rule": "+ alpha=0.001 for ~60 repeated checks (shipped)",
+      "false_rollback_rate": 0.01,
+      "by_guardrail": {
+        "error": 0.01,
+        "latency": 0.0,
+        "psi": 0.0
+      }
+    }
+  ],
+  "check_interval_curve": {
+    "intervals_s": [
+      1,
+      2,
+      5,
+      10,
+      20
+    ],
+    "alpha=0.05, 1 breach": [
+      0.938,
+      0.95,
+      0.91,
+      0.858,
+      0.798
+    ],
+    "shipped rule": [
+      0.016,
+      0.016,
+      0.004,
+      0.01,
+      0.01
+    ]
+  }
+}
