@@ -99,7 +99,7 @@ against a limit of 8.1 ms), as the Q2 simulation predicts (100%).
 **Why ignore latency for 10 s after each weight change?**
 Going from 25% to 100% sends v2 four times more traffic at once; for a few seconds requests queue.
 In one rehearsal on battery in Power saver mode, that burst gave a p99 of 96 ms in the first 10 s
-of the 100% step and rolled back a healthy v2. Real canary tools also wait a short warm-up before
+of the 100% step and rolled back a healthy v2 (log in `report/evidence/rollouts/rehearsal_power_saver/`). Real canary tools also wait a short warm-up before
 judging latency; errors and PSI still count from the first request.
 
 **Why does p99 need 300 requests?**

@@ -15,7 +15,7 @@ Run every command in a PowerShell window **opened in the project folder**.
 docker compose up -d
 ```
 
-▶ Run one full rehearsal so you know it works on this laptop (~8 minutes):
+▶ With the charger plugged in, run one full rehearsal so you know it works on this laptop (~8 minutes):
 
 ```powershell
 .\scripts\scenario.cmd healthy
@@ -24,6 +24,10 @@ docker compose up -d
 It must end with `RESULT: PASSED`. If not, see "If something goes wrong" at the end.
 
 ## Just before the presentation
+
+▶ **Plug in the charger** and set Windows to **Balanced** or **Best performance** (Settings →
+System → Power). In Power saver the CPU is throttled and v2's p99 at 100% traffic gets close to
+its limit (46 ms against 52 ms in our test), so a healthy rollout could be rolled back.
 
 ▶ Start Docker Desktop and run `docker compose up -d` (it is fast when nothing changed).
 

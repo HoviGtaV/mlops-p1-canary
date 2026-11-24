@@ -64,3 +64,11 @@ def test_exact_test_does_not_fire_on_one_rare_error():
     assert p_z < 0.01
     assert binomial_pvalue(1, 58, 20, 10_000) > 0.05      # exact test disagrees
     assert binomial_pvalue(6, 100, 20, 10_000) < 1e-6     # real 5% error rate: caught
+
+
+def test_status_is_json_safe_when_a_statistic_is_missing():
+    import json
+    from p1.controller import json_safe
+    out = json_safe({"p99_b": float("nan"), "x": [1.0, float("inf")], "ok": 2.5})
+    assert out == {"p99_b": None, "x": [1.0, None], "ok": 2.5}
+    json.dumps(out, allow_nan=False)   # what the web framework does: must not raise

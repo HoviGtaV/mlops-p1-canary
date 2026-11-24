@@ -141,6 +141,11 @@ Split by <code>patient_nbr</code>, 70/15/15, seed 42: 69,623 / 14,887 / 14,833 e
 </tbody>
 </table></div>
 <p>A breach must appear on <strong>two consecutive checks</strong>. Rollback = router weight 0; aliases unchanged.
+The 10 s latency settle was added last, after a rehearsal on battery in Power saver mode was rolled
+back by the burst right after the 25% → 100% switch (p99 96 ms in the first 5 s). The runs in
+section 1 predate it; with it, a healthy run passed again and the +50 ms scenario was again rolled
+back at 1% (315 requests, p99 87 ms). Logs: <code>report/evidence/rollouts/rehearsal_power_saver/</code> and
+<code>report/evidence/rollouts/with_settle/</code>.
 Both variants have a simulated background error rate of 0.2% (a flaky dependency); without it v1
 has zero errors and the z-test has nothing to compare against.</p>
 <p>Three choices go beyond the literal subject. They were forced by measurements and by <strong>real false

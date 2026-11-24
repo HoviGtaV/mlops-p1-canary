@@ -70,9 +70,12 @@ Write-Host "Rollout started. Log: $($r.log_file)"
 if ($NoWait) { return }
 
 # 5. Progress every 10 s ("!" marks a guardrail breached at that check).
+$s = [pscustomobject]@{ status = "running" }
 do {
     Start-Sleep 10
-    $s = Invoke-RestMethod "$controller/rollout/status"
+    # A temporary error reading the status must not stop the script (the rollout goes on).
+    try { $s = Invoke-RestMethod "$controller/rollout/status" }
+    catch { Write-Host "(status temporarily unavailable, retrying)"; continue }
     $c = $s.last_check
     if ($c) {
         $g = ($c.guardrails.PSObject.Properties | ForEach-Object {

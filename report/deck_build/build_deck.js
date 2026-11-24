@@ -206,7 +206,7 @@ rails.forEach((r, i) => {
   text(s, r[2], { x: x + 0.3, y: y + 1.0, w: 5.35, h: 0.95, fontSize: 15, color: C.text1 });
   text(s, r[3], { x: x + 0.3, y: y + 1.92, w: 5.35, h: 0.35, fontSize: 13, italic: true, color: C.accent1 });
 });
-s.addNotes("Each guardrail is aimed at one failure. Error rate: the z-test the subject asks for, plus an exact test because errors are rare. Latency: v2 is allowed its known extra cost, anything beyond trips it. PSI: compares the shape of the predicted risk distributions, the only thing that sees a bug that still returns HTTP 200. Invalid scores: NaN or out of range. A breach must repeat on two consecutive checks.");
+s.addNotes("Each guardrail is aimed at one failure. Error rate: the z-test the subject asks for, plus an exact test because errors are rare. Latency: v2 is allowed its known extra cost, anything beyond trips it; it is judged 10 seconds after each traffic change, to skip the short queue the jump in traffic causes. PSI: compares the shape of the predicted risk distributions, the only thing that sees a bug that still returns HTTP 200. Invalid scores: NaN or out of range. A breach must repeat on two consecutive checks.");
 
 // 6 ---------------------------------------------------------------- results
 pres.addSection({ title: "Results" });

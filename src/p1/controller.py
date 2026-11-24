@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 import threading
 import time
@@ -380,10 +381,22 @@ def abort():
     return {"aborting": True}
 
 
+def json_safe(obj):
+    """NaN/inf -> None. A statistic that is not available yet (e.g. v2's p99 during the
+    settle time) is NaN, and JSON responses cannot carry NaN."""
+    if isinstance(obj, float):
+        return obj if math.isfinite(obj) else None
+    if isinstance(obj, dict):
+        return {k: json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [json_safe(v) for v in obj]
+    return obj
+
+
 @app.get("/rollout/status")
 def status():
     ro = _current["rollout"]
-    return {"status": "idle"} if ro is None else ro.summary()
+    return {"status": "idle"} if ro is None else json_safe(ro.summary())
 
 
 @app.get("/health")
