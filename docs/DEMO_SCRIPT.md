@@ -108,7 +108,7 @@ and **~65 requests** with our real rule, which matches the live run: under a min
 💬 Q2: "Repeated checks create false alarms. With naive settings, a **healthy** v2 was rolled back
 in almost every simulated rollout, and it happened to us 5 times while tuning. Each fix is in the
 report: minimum samples, an exact test for rare errors, PSI only from 5% traffic, alpha corrected
-for ~60 checks, and two breaches in a row. With the shipped rule: essentially no false rollbacks."
+for ~85 checks, and two breaches in a row. With the shipped rule: essentially no false rollbacks."
 
 💬 Q3: "The canary cannot tell us whether v2 is **better**. It only proves v2 is **safe**: no errors,
 acceptable latency, sane scores. 'Better' means fewer readmissions, which we only learn 30 days later,

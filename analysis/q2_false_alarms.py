@@ -164,7 +164,7 @@ def main():
         Rule("+ exact binomial confirmation", 0.01, 0.01, 2, psi_auto, exact=True),
         Rule("+ PSI from 5% traffic, n>=500, threshold 0.15", 0.01, 0.01, 2, 0.15,
              exact=True, **shipped),
-        Rule("+ alpha=0.001 for ~60 repeated checks (shipped)", 0.001, 0.01, 2, 0.15,
+        Rule("+ alpha=0.001 for ~85 repeated checks (shipped)", 0.001, 0.01, 2, 0.15,
              exact=True, **shipped),
     ]
     results = {"healthy_rollouts_in_logs": n_windows, "latency_allowance_ms": ALLOWANCE_S * 1000,

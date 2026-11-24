@@ -46,17 +46,18 @@ at 0.2% happens ~11% of the time: not evidence). We still compute the z-test; th
 agree.
 
 **Why alpha = 0.001 and not 0.05?**
-The controller checks every 5 seconds, about 60 times per rollout. With 0.05 per check, false
-alarms add up. 0.05 / 60 ≈ 0.001 (Bonferroni idea). A real 5% error rate is so far from 0.2% that
+The controller checks every 5 seconds, about 85 times per healthy rollout. With 0.05 per check,
+false alarms add up (1 − 0.95⁸⁵ ≈ 99%). 0.05 / 85 ≈ 0.0006, rounded to 0.001 (Bonferroni idea). A real 5% error rate is so far from 0.2% that
 it is still caught after ~65 requests.
 
 **What is PSI?**
 Population Stability Index: compares two histograms (here v2's predicted risk vs v1's) bin by bin:
-sum of (share_B − share_A) × ln(share_B / share_A). 0 = identical; below 0.1 small; above 0.2 large.
+sum of (share_B − share_A) × ln(share_B / share_A). 0 = identical. Usual reading: below 0.1 no real
+change, 0.1–0.25 moderate, above 0.25 large.
 
 **Why does PSI only start at 5% traffic?**
 At 1% traffic v2 sees only ~100 patients. Their risk distribution differs from the general
-population just by chance, so a *healthy* v2 often has PSI 0.2-0.5: we simulated it, PSI cannot
+population just by chance, so a *healthy* v2 has a PSI around 0.18 (median) and up to 0.40: we simulated it, PSI cannot
 separate healthy from buggy there (67% false alarms). At 5% (~500 patients) healthy stays below
 0.14 (p99) and the bug is above 0.15 in 95% of cases.
 
@@ -69,8 +70,8 @@ v2 is heavier by design (gradient boosting with ~90 trees vs one logistic regres
 vs 6 ms at p99. The literal rule "≤ 1.1 × v1" would roll back every healthy v2. The extra cost was
 accepted when v2 was approved, so we measured it offline (27 ms, stored as a tag on the model
 version) and the limit is 1.1 × (v1's live p99 + 1.5 × 27 ms) ≈ 52 ms. The 1.5 factor is headroom
-because the offline benchmark runs on an idle CPU; under real load v2's p99 reached ~40 ms. Trade-off:
-a regression smaller than ~15 ms would not be caught.
+because the offline benchmark runs on an idle CPU; under real load v2's p99 reached 42–46 ms.
+Trade-off: a slowdown that keeps v2's p99 under ~52 ms would not be caught.
 
 **Why does p99 need 300 requests?**
 The p99 of 100 requests is basically the single slowest one: very noisy. It caused a false rollback
@@ -89,8 +90,8 @@ could memorise them and the test score would be too optimistic.
 They cannot be readmitted: keeping them would teach the model nonsense.
 
 **Why is AUC only ~0.66-0.68?**
-Readmission is hard to predict from administrative data; published results on this dataset are in
-the same range. For this project the model quality matters less than the rollout.
+Readmission is hard to predict from administrative data; typical results on this dataset are in the
+0.6–0.7 range. For this project the model quality matters less than the rollout.
 
 **What is the silent schema bug?**
 An upstream change renamed `number_inpatient` (number of past inpatient visits, the strongest

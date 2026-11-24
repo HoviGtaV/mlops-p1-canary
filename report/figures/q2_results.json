@@ -88,7 +88,7 @@
       }
     },
     {
-      "rule": "+ alpha=0.001 for ~60 repeated checks (shipped)",
+      "rule": "+ alpha=0.001 for ~85 repeated checks (shipped)",
       "false_rollback_rate": 0.01,
       "by_guardrail": {
         "error": 0.01,

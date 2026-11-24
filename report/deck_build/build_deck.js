@@ -132,9 +132,9 @@ models.forEach((m, i) => {
 });
 text(s, [
   { text: "Data: ", options: { bold: true } },
-  { text: "99,343 encounters (deaths and hospice removed), target readmitted < 30 days (11.3%), split by patient 70/15/15 with seed 42. The test split is the live traffic." },
+  { text: "99,343 encounters (deaths and hospice removed), target readmitted < 30 days (11.4%), split by patient 70/15/15 with seed 42. The test split is the live traffic." },
 ], { x: 0.6, y: 5.85, w: 12.1, h: 0.8, fontSize: 15, color: C.text1 });
-s.addNotes("v2 wins offline on validation and test AUC and on recall in the top 15 percent. But it costs about 10 ms per prediction against 1 ms for v1. Splitting by patient matters: a patient with several stays must not appear in both train and test. We removed deaths and hospice discharges because they cannot be readmitted.");
+s.addNotes("v2 wins offline on validation and test AUC, and on recall in the top 15 percent on validation (on test the two are equal at 31 percent). But it costs about 10 ms per prediction against 1 ms for v1. Splitting by patient matters: a patient with several stays must not appear in both train and test. We removed deaths and hospice discharges because they cannot be readmitted.");
 
 // 3 ---------------------------------------------------------------- canary plan
 pres.addSection({ title: "System" });
@@ -186,7 +186,7 @@ arrow(s, 6.65, 5.8, 6.05, 5.8);
 arrow(s, 4.75, 5.2, 4.75, 3.65, "E4574F");
 text(s, "both variants: same image, different alias", { x: 6.7, y: 2.72, w: 2.6, h: 0.45, fontSize: 11, italic: true, color: "5B6B70", align: "center" });
 text(s, "set weight / rollback", { x: 2.2, y: 4.25, w: 2.45, h: 0.4, fontSize: 11, italic: true, color: C.accent2, align: "right" });
-text(s, "Every metric has a variant label", { x: 0.6, y: 1.5, w: 5.4, h: 0.4, fontSize: 14, bold: true, color: C.accent1 });
+text(s, "Every app metric has a variant label", { x: 0.6, y: 1.5, w: 5.4, h: 0.4, fontSize: 14, bold: true, color: C.accent1 });
 s.addNotes("Walk the request path: the simulator replays test patients, the router decides A or B and measures what users see, the two variants are literally the same container with a different registry alias. Prometheus scrapes everything; Grafana shows v1 and v2 side by side. The controller reads Prometheus through its HTTP API and changes the router weight. Each variant runs 8 worker processes so v2 can take 100 percent of the traffic.");
 
 // 5 ---------------------------------------------------------------- guardrails
@@ -194,7 +194,7 @@ pres.addSection({ title: "Guardrails" });
 s = content("Four guardrails decide if v2 may go on", "Guardrails");
 const rails = [
   ["1", "Error rate", "One-sided two-proportion z-test vs v1: p < 0.001, gap ≥ 1 point, confirmed by an exact binomial test", "catches: random HTTP 500s"],
-  ["2", "p99 latency", "p99(v2) ≤ 1.1 × (p99(v1) + v2's known extra cost) ≈ 52 ms, from 300 requests", "catches: extra latency"],
+  ["2", "p99 latency", "p99(v2) ≤ 1.1 × (p99(v1) + 1.5 × v2's offline extra cost) ≈ 52 ms, from 300 requests", "catches: extra latency"],
   ["3", "Score PSI", "Distribution of v2's predicted risk vs v1's: PSI ≤ 0.15, from 5% traffic and 500 requests", "catches: silent schema bug"],
   ["4", "Invalid scores", "Share of NaN or out-of-range probabilities ≤ 0.1%", "catches: broken model output"],
 ];
@@ -225,7 +225,7 @@ s.addTable([
 card(s, 0.6, 5.15, 12.1, 1.35, { fill: C.background2, shadow: false });
 text(s, [
   { text: "Each failure was caught by the guardrail built for it, ", options: { bold: true, color: C.text2 } },
-  { text: "at 1% or 5% traffic: at worst a few hundred patient requests were exposed. During a rollback the registry aliases never moved." },
+  { text: "at 1% or 5% traffic: at most ~960 v2 requests were exposed (the schema bug, which only PSI can see). During a rollback the registry aliases never moved." },
 ], { x: 0.9, y: 5.3, w: 11.5, h: 1.05, fontSize: 16, color: C.text1, valign: "middle" });
 s.addNotes("This is the headline result. The healthy v2 passed twice. Each injected failure was stopped by the right guardrail: latency at 1 percent, errors at 1 percent in 46 seconds, and the schema bug at 5 percent, because PSI only starts there (we will see why).");
 
@@ -233,8 +233,8 @@ s.addNotes("This is the headline result. The healthy v2 passed twice. Each injec
 s = content("A healthy rollout, as Grafana shows it", "Results");
 img(s, "grafana_healthy.png", 0.6, 1.45, 7.6, 5.35, "Grafana dashboard during a healthy rollout");
 const hs = [["PASSED", "1% → 5% → 25% → 100% in 7 min", C.accent3],
-            ["~35 ms", "v2 p99 at 100%, limit 52 ms", C.accent1],
-            ["0.02–0.05", "score PSI, threshold 0.15", C.accent1]];
+            ["36–46 ms", "v2 p99 at 100%, limit 52 ms", C.accent1],
+            ["0.02–0.08", "score PSI, threshold 0.15", C.accent1]];
 hs.forEach((h, i) => {
   const y = 1.55 + i * 1.75;
   card(s, 8.6, y, 4.1, 1.5);
@@ -246,8 +246,8 @@ s.addNotes("Live dashboard of a healthy run. Point at the canary weight going up
 // 8 ---------------------------------------------------------------- schema bug
 s = content("The silent schema bug: HTTP 200, wrong risk", "Results");
 img(s, "grafana_schema.png", 0.6, 1.45, 7.6, 5.35, "Grafana dashboard during the schema-bug rollout");
-const sb = [["200 OK", "every request answered, errors and latency normal", C.accent1],
-            ["11.2% → 8.9%", "mean predicted risk, test AUC 0.663 → 0.623", C.accent4],
+const sb = [["200 OK", "every request answered; error and latency guardrails never fired", C.accent1],
+            ["11.2% → 8.9%", "offline mean risk; test AUC 0.663 → 0.623", C.accent4],
             ["PSI 0.187", "> 0.15: rolled back at 5% traffic", C.accent2]];
 sb.forEach((h, i) => {
   const y = 1.55 + i * 1.75;
@@ -276,7 +276,7 @@ s.addNotes("Baseline error 0.2 percent, v2 with the bug fails 5.2 percent. Becau
 s = content("Q2 · Repeated checks roll back healthy models", "Report questions");
 const q2labels = ["Literal rules (p99 ≤ 1.1×v1, α 0.05)", "+ allow v2's known extra latency", "+ minimum samples per guardrail",
   "+ PSI threshold = baseline + 0.10", "+ α 0.01 and gap ≥ 1 point", "+ 2 consecutive breaches", "+ exact binomial confirmation",
-  "+ PSI from 5% traffic, threshold 0.15", "+ α 0.001 for ~60 checks (shipped)"];
+  "+ PSI from 5% traffic, threshold 0.15", "+ α 0.001 for ~85 checks (shipped)"];
 const q2vals = [100, 100, 93.3, 88.7, 65.4, 49.7, 43.0, 4.3, 1.0];
 s.addChart(pres.charts.BAR, [{ name: "False rollbacks of a healthy v2 (%)", labels: q2labels.slice().reverse(), values: q2vals.slice().reverse() }], {
   x: 0.6, y: 1.45, w: 8.0, h: 5.3, barDir: "bar", varyColors: true,
@@ -292,7 +292,7 @@ text(s, "100% → 1%", { x: 9.2, y: 1.75, w: 3.3, h: 0.9, fontSize: 40, bold: tr
 text(s, "false rollbacks of a healthy v2, 1,000 simulated rollouts per rule", { x: 9.2, y: 2.65, w: 3.3, h: 0.8, fontSize: 14, color: C.text1 });
 text(s, [
   { text: "Why: ", options: { bold: true, color: C.text2 } },
-  { text: "~60 checks per rollout. At 5% false positives per check: 1 − 0.95⁶⁰ ≈ 95%.", options: { breakLine: true } },
+  { text: "~85 checks per rollout. At 5% false positives per check: 1 − 0.95⁸⁵ ≈ 99%.", options: { breakLine: true } },
   { text: " ", options: { breakLine: true } },
   { text: "Live: ", options: { bold: true, color: C.text2 } },
   { text: "5 of our first 6 healthy runs were rolled back. With the shipped rule: 2 of 2 passed." },

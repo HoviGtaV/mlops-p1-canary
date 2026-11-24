@@ -17,7 +17,7 @@ guardrails at every step from Prometheus, and rolls back automatically if one of
 | healthy | **passed**, v2 at 100% (2 runs) | — | ~7 min |
 | `B_EXTRA_LATENCY_MS=50` | **rolled back** | latency_p99 (88 ms > 52 ms limit) | 1% traffic, 314 v2 requests |
 | `B_ERROR_RATE=0.05` | **rolled back** | error_rate (z = 10.0) | 1% traffic, 65 v2 requests, 46 s |
-| `B_SCHEMA_BUG=1` (HTTP 200) | **rolled back** | score_psi (0.187 > 0.15) | 5% traffic, 546 v2 requests |
+| `B_SCHEMA_BUG=1` (HTTP 200) | **rolled back** | score_psi (0.187 > 0.15) | 5% traffic, 546 v2 requests (957 in total) |
 
 ## Architecture
 
@@ -36,7 +36,7 @@ flowchart LR
 
 Every service runs in Docker Compose on a laptop CPU. Both variants run **the same image** and
 differ only by environment variables (`MODEL_ALIAS=champion|challenger`, failure flags).
-Every metric carries a `variant` label.
+Every application metric (router, variants, controller) carries a `variant` label.
 
 | Service | Port | Role |
 |---|---|---|
@@ -89,7 +89,7 @@ Stop everything: `docker compose down` (add `-v` to also delete MLflow and Prome
 
 * **Data**: UCI Diabetes 130-US hospitals (UCI #296), 101,766 encounters. Encounters ending in
   death or hospice are removed (they cannot be readmitted): 99,343 remain.
-* **Target**: `readmitted == "<30"` (binary, ~11.3% positive).
+* **Target**: `readmitted == "<30"` (binary, 11.4% positive).
 * **Split**: by `patient_nbr` (each patient appears in one split only), 70/15/15, seed 42:
   69,623 / 14,887 / 14,833 encounters. The test split is the traffic the simulator replays.
 * **v1**: logistic regression (one-hot categories, scaled numerics) → `@champion`.
