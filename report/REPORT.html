@@ -12,7 +12,8 @@ p,li,table,img,.keep{break-inside:avoid;page-break-inside:avoid}
 code{background:#f2f2f2;padding:0 3px;font-size:9pt}
 @page{size:A4;margin:14mm}
 </style></head><body><h1>P1 — Canary: safe rollout of a new readmission model</h1>
-<p><strong>MLOps, ESIB, Fall 2026</strong> · Dataset: UCI Diabetes 130-US hospitals · Repository: this folder</p>
+<p><strong>MLOps, ESIB, Fall 2026</strong> · <strong>Team:</strong> Hovig Majarian, Rayan Salman, Wassim Mouawad</p>
+<p>Dataset: UCI Diabetes 130-US hospitals · Repository: this folder</p>
 <div class="keep"><h2>1. Goal and decision</h2><p>v1 (logistic regression) predicts whether a diabetic patient will be readmitted within 30 days.
 v2 (gradient boosting) is better offline but about ten times heavier. We built a canary release
 that moves patients to v2 in four steps (1% → 5% → 25% → 100%), checks four guardrails from

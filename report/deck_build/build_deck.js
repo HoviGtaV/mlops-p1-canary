@@ -23,7 +23,7 @@ const pres = new pptxgen();
 pres.layout = "LAYOUT_WIDE"; // 13.333 x 7.5
 pres.theme = { headFontFace: THEME.headFontFace, bodyFontFace: THEME.bodyFontFace };
 pres.title = "P1 - Canary rollout of a readmission model";
-pres.author = "MLOps P1 team";
+pres.author = "Hovig Majarian, Rayan Salman, Wassim Mouawad";
 const C = pres.SchemeColor;
 
 // ------------------------------------------------------------------ layouts
@@ -108,7 +108,7 @@ function arrow(slide, x1, y1, x2, y2, color) {
 pres.addSection({ title: "Story" });
 let s = pres.addSlide({ masterName: "TITLE_DARK", sectionTitle: "Story" });
 s.addText("Shipping a better readmission model without breaking the service", { placeholder: "title" });
-s.addText("P1 · Canary release on UCI Diabetes 130-US hospitals\nMLOps · ESIB · Fall 2026", { placeholder: "body" });
+s.addText("P1 · Canary release on UCI Diabetes 130-US hospitals\nHovig Majarian · Rayan Salman · Wassim Mouawad\nMLOps · ESIB · Fall 2026", { placeholder: "body" });
 s.addNotes("Introduce the project: P1, a canary release. A hospital already uses a model to predict 30-day readmissions; we want to replace it with a better one without risking the service. Over the next slides: the two models, how the canary works, our system, the four guardrails, what happened when we broke v2 on purpose, and the three report questions.");
 
 // 2 ---------------------------------------------------------------- v1 vs v2

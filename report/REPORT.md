@@ -1,6 +1,8 @@
 # P1 — Canary: safe rollout of a new readmission model
 
-**MLOps, ESIB, Fall 2026** · Dataset: UCI Diabetes 130-US hospitals · Repository: this folder
+**MLOps, ESIB, Fall 2026** · **Team:** Hovig Majarian, Rayan Salman, Wassim Mouawad
+
+Dataset: UCI Diabetes 130-US hospitals · Repository: this folder
 
 ## 1. Goal and decision
 

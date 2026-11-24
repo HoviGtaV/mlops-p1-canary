@@ -1,6 +1,6 @@
 # P1 — Canary: safe rollout of a new readmission model (UCI Diabetes)
 
-MLOps project, ESIB, Fall 2026.
+MLOps project, ESIB, Fall 2026 · Team: Hovig Majarian, Rayan Salman, Wassim Mouawad.
 
 **Story.** v1 (logistic regression) predicts 30-day hospital readmission in production.
 v2 (gradient boosting) is better offline but heavier. It must replace v1 **without breaking
