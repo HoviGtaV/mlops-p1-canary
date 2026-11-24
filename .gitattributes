@@ -1,0 +1,9 @@
+# Files used inside the Linux containers keep LF line endings on every OS.
+* text=auto eol=lf
+# Windows launchers and PowerShell scripts use CRLF.
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+# Binary deliverables.
+*.png binary
+*.pdf binary
+*.pptx binary

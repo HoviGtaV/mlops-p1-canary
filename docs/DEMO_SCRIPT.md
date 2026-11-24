@@ -1,24 +1,39 @@
-# Live demo script (about 12 minutes)
+# Live demo script (about 15 minutes)
 
 Plain-language script: what to **do** (▶) and what to **say** (💬).
+Run every command in a PowerShell window **opened in the project folder**.
 
-## Before the presentation (at home, 15 minutes before)
+> Use `.\scripts\scenario.cmd`, not `scenario.ps1` directly: on a default Windows setup PowerShell
+> refuses to run `.ps1` files ("running scripts is disabled on this system"); the `.cmd` launcher
+> works whatever the setting.
 
-▶ Start Docker Desktop, then in a PowerShell window inside the project folder:
+## The day before (15 minutes, at home)
+
+▶ Start Docker Desktop, then:
 
 ```powershell
 docker compose up -d
 ```
 
-▶ Open three browser tabs:
+▶ Run one full rehearsal so you know it works on this laptop (~8 minutes):
+
+```powershell
+.\scripts\scenario.cmd healthy
+```
+
+It must end with `RESULT: PASSED`. If not, see "If something goes wrong" at the end.
+
+## Just before the presentation
+
+▶ Start Docker Desktop and run `docker compose up -d` (it is fast when nothing changed).
+
+▶ Open four browser tabs:
 1. Grafana: <http://localhost:3000> (dashboard "P1 - Canary rollout")
 2. MLflow: <http://localhost:5000> → Models → `readmission`
-3. Controller status: <http://localhost:8090/rollout/status>
+3. Router health: <http://localhost:8000/health>: must show both variants with a model version
+4. Controller status: <http://localhost:8090/rollout/status>
 
-▶ Check everything is up: <http://localhost:8000/health> should show both variants with a model version.
-Wait 1-2 minutes so Grafana shows traffic (blue line at ~150 req/s).
-
-If anything is broken: `docker compose down` then `docker compose up -d` and wait 2 minutes.
+▶ Wait until Grafana shows traffic (blue line at ~150 req/s).
 
 ---
 
@@ -32,29 +47,30 @@ we give v2 to 1% of patients, then 5, 25 and 100%, and check at every step that 
 
 ## 2. The architecture (1.5 min)
 
-▶ Show the diagram in the README (or the report).
+▶ Show the architecture slide (or the diagram in the README).
 
 💬 "Everything runs in Docker Compose on this laptop. The **simulator** replays real test patients
 as users. The **router** sends each patient to A or B, sticky: the same patient always goes to the
 same model, by a hash of the patient id. Both variants run the **same image** and load their model
-from the **MLflow registry**: A loads the alias `@champion`, B loads `@challenger`. Every service
-exposes metrics with a `variant` label; **Prometheus** stores them and **Grafana** shows A and B side
-by side. The **controller** is a Python loop that changes the traffic weight and reads Prometheus."
+from the **MLflow registry**: A loads the alias `@champion`, B loads `@challenger`. Every
+application metric has a `variant` label; **Prometheus** stores them and **Grafana** shows A and B
+side by side. The **controller** is a Python loop that changes the traffic weight and reads
+Prometheus."
 
-▶ MLflow tab: show version 1 `@champion`, version 2 `@challenger`, the AUC metrics, and the tags
-`offline_psi_vs_champion` and `offline_latency_overhead_ms`.
+▶ MLflow tab: show version 1 `@champion`, version 2 `@challenger`, the `val_auc` tags, and on
+version 2 the tags `offline_psi_vs_champion` and `offline_latency_overhead_ms`.
 
-## 3. A healthy rollout (start it now, it runs in the background ~7 min)
+## 3. Start a healthy rollout (it runs ~7.5 min on its own)
 
 ▶ In PowerShell:
 
 ```powershell
-.\scripts\scenario.ps1 healthy
+.\scripts\scenario.cmd healthy
 ```
 
 💬 "At each step the controller checks four guardrails every 5 seconds:
 - **error rate**: is v2 failing more often than v1? A one-sided two-proportion z-test.
-- **p99 latency**: are the slowest 1% of v2's requests too slow compared with v1?
+- **p99 latency**: are the slowest 1% of v2's requests too slow?
 - **PSI of the scores**: does v2 predict a very different distribution of risk than v1?
 - **invalid scores**: any NaN or out-of-range probability?
 If one of them fails twice in a row, the controller puts the weight back to 0. That is the rollback."
@@ -65,57 +81,66 @@ If one of them fails twice in a row, the controller puts the weight back to 0. T
 heavier model. The latency guardrail allows the extra cost we measured offline, and catches anything
 beyond it."
 
-(While it runs, go to section 4 and come back at the end to show "PASSED" and 100%.)
+## 4. While it runs: the three report questions (3-4 min, on the slides)
 
-## 4. Breaking v2 on purpose (5 min)
+💬 Q1: "At 1% traffic, a 5% error rate is detected after about **47 requests** by the power formula
+and **~65 requests** with our real rule, which matches our live run: 65 requests, 46 seconds."
 
-💬 "Now the important part: a canary is only useful if it catches problems. We inject three failures
+💬 Q2: "Repeated checks create false alarms. With the literal rules, a **healthy** v2 was rolled
+back in every simulated rollout, and it happened to us 5 times in our first 6 healthy runs. Each fix
+is in the report: an allowance for v2's known latency, minimum samples, an exact test for rare
+errors, PSI only from 5% traffic, alpha corrected for ~85 checks, and two breaches in a row. With
+the shipped rule: about 1% false rollbacks."
+
+💬 Q3: "The canary cannot tell us whether v2 is **better**. It only proves v2 is **safe**: no extra
+errors, acceptable latency, sane scores. 'Better' means fewer readmissions, which we only learn
+30 days later, and the difference is tiny: even half a point less readmission would need about
+62,000 patients per group in an A/B test."
+
+▶ Back to Grafana: the rollout ends with **PASSED** and v2 at **100%**.
+
+## 5. Breaking v2 on purpose (5 min)
+
+💬 "Now the important part: a canary is only useful if it catches problems. We inject failures
 in v2 with environment flags."
 
-▶ When the healthy rollout is finished (or press Ctrl+C and run
-`Invoke-RestMethod -Method Post http://localhost:8090/rollout/abort`), run:
-
 ```powershell
-.\scripts\scenario.ps1 errors
+.\scripts\scenario.cmd errors
 ```
 
-💬 "v2 now fails 5% of requests. Watch the error-rate panel." It is rolled back after **about 60
-requests on v2, in under a minute**, at 1% traffic. "Only 1% of patients were exposed, for less than
-a minute."
+💬 "v2 now fails 5% of requests. Watch the error-rate panel." It is rolled back after **about 65
+requests on v2, in under a minute**, at 1% traffic. "Only 1% of patients were exposed, for less
+than a minute."
 
 ```powershell
-.\scripts\scenario.ps1 latency
+.\scripts\scenario.cmd latency
 ```
 
-💬 "v2 now takes 50 ms longer. p99 latency goes to ~90 ms against a limit of ~52 ms."
-Rolled back at 1% after ~300 requests (~3.5 min). Use this time to answer questions.
+💬 "v2 now takes 50 ms longer. Its p99 goes to ~90 ms against a limit of ~52 ms." Rolled back at
+1% after ~300 requests (~3.5 min). Use this time to take questions.
 
-For the **silent schema bug** (6 min), show the screenshot `report/figures/grafana_schema.png` and
-the timeline `report/figures/rollout_schema.png` instead of running it live:
+For the **silent schema bug** (6 min), show the slide (Grafana screenshot) instead of running it:
 
 💬 "This is the dangerous one. Upstream, a column was renamed: `number_inpatient` became
 `num_inpatient`. The service does not crash: the missing column is filled with a default value, so
-every request still returns HTTP 200. Errors and latency look perfect. But that column is the
-strongest predictor, so v2's risk scores drop: the mean risk falls from 11% to 9%, and patients who
-were often hospitalised now look low-risk. Only the **PSI** of the score distribution caught it,
-at 5% traffic: 0.19 against a threshold of 0.15."
-
-## 5. The three report questions (2 min)
-
-💬 Q1: "At 1% traffic, a 5% error rate is detected after about **47 requests** by the power formula
-and **~65 requests** with our real rule, which matches the live run: under a minute."
-
-💬 Q2: "Repeated checks create false alarms. With naive settings, a **healthy** v2 was rolled back
-in almost every simulated rollout, and it happened to us 5 times while tuning. Each fix is in the
-report: minimum samples, an exact test for rare errors, PSI only from 5% traffic, alpha corrected
-for ~85 checks, and two breaches in a row. With the shipped rule: essentially no false rollbacks."
-
-💬 Q3: "The canary cannot tell us whether v2 is **better**. It only proves v2 is **safe**: no errors,
-acceptable latency, sane scores. 'Better' means fewer readmissions, which we only learn 30 days later,
-and the difference is tiny, so it would need an A/B test with tens of thousands of patients."
+every request still returns HTTP 200, and the error and latency guardrails stay quiet. But that
+column is the strongest predictor, so v2's risk scores drop: offline, the mean risk falls from 11%
+to 9%, and patients who were often hospitalised now look low-risk. Only the **PSI** of the score
+distribution caught it, at 5% traffic: 0.19 against a threshold of 0.15."
 
 ## 6. Closing (30 s)
 
 💬 "To summarise: v2 went to 100% safely when healthy, and each of the three failures was caught by
 the right guardrail at 1 or 5% traffic. The registry aliases never moved during a rollback: v1 stays
 the champion until a human promotes v2."
+
+---
+
+## If something goes wrong
+
+* A scenario says a rollout is still running: it aborts it by itself; or run
+  `Invoke-RestMethod -Method Post http://localhost:8090/rollout/abort`.
+* `/health` fails or Grafana is empty: `docker compose up -d`, wait 1-2 minutes.
+* Still broken: `docker compose down` then `docker compose up -d` (keeps the models and metrics).
+* Never run `docker compose down -v` before the presentation: it deletes the registry and forces
+  a retraining.

@@ -52,25 +52,31 @@ Each variant runs 8 uvicorn worker processes (Prometheus multiprocess mode adds 
 
 ## Run it
 
-Requirements: Docker Desktop (Windows, macOS or Linux). Nothing else.
+Requirements: Docker Desktop. The scenario and screenshot scripts are for Windows (PowerShell,
+Edge); on macOS/Linux run them with PowerShell 7 (`pwsh scripts/scenario.ps1 healthy`) or call the
+controller API directly.
 
 ```powershell
-docker compose up -d --build        # first run downloads the data and trains both models
+docker compose up -d --build        # first build downloads ~200 MB of Python packages, then the
+                                    # trainer downloads the data and trains both models
 ```
 
 Open Grafana at <http://localhost:3000>, MLflow at <http://localhost:5000>.
 
-Run a scenario (each recreates variant-b with a failure flag, then starts a rollout):
+Run a scenario (each stops a running rollout, recreates variant-b with a failure flag, then
+starts a rollout). Use the `.cmd` launcher: it works whatever the PowerShell execution policy is.
 
 ```powershell
-.\scripts\scenario.ps1 healthy   # expected: PASSED, v2 at 100%
-.\scripts\scenario.ps1 latency   # +50 ms on v2      -> rolled back by latency_p99
-.\scripts\scenario.ps1 errors    # 5% HTTP 500 on v2 -> rolled back by error_rate
-.\scripts\scenario.ps1 schema    # silent schema bug -> rolled back by score_psi
+.\scripts\scenario.cmd healthy   # expected: PASSED, v2 at 100%
+.\scripts\scenario.cmd latency   # +50 ms on v2      -> rolled back by latency_p99
+.\scripts\scenario.cmd errors    # 5% HTTP 500 on v2 -> rolled back by error_rate
+.\scripts\scenario.cmd schema    # silent schema bug -> rolled back by score_psi
 ```
 
-Controller API: `POST /rollout/start`, `POST /rollout/abort`, `GET /rollout/status`.
-Every rollout writes its full decision log to `data/rollouts/rollout-<time>.jsonl`.
+Controller API: `POST /rollout/start` (optional JSON body overriding any setting, e.g.
+`{"latency_allow_offline_overhead": false}`), `POST /rollout/abort`, `GET /rollout/status`.
+Every rollout writes its full decision log to `data/rollouts/rollout-<time>.jsonl`; the logs of
+the runs used in the report are kept in `report/evidence/`.
 
 Report figures and analyses (run inside the stack; results land in `data/report_figures/`):
 
@@ -104,7 +110,8 @@ Stop everything: `docker compose down` (add `-v` to also delete MLflow and Prome
 ## Guardrails
 
 Checked every 5 s. v2's traffic since the step started is compared with v1's traffic since the
-rollout started. Every threshold below is a setting of the controller (environment variable).
+rollout started. Every threshold below is a controller setting: an environment variable of the
+controller container, or a JSON override when a rollout is started.
 
 | Guardrail | Rule (shipped settings) | Catches |
 |---|---|---|
@@ -122,10 +129,12 @@ until v2 has served 400 / 700 / 1,000 / 1,500 requests.
 * *Latency.* The subject's rule is p99(v2) ≤ 1.1 × p99(v1). v2 is heavier by design (~30 ms vs
   ~6 ms p99), so the literal rule rolls back a healthy v2 every time (Q2 simulation: 100%). The
   limit therefore adds v2's extra cost, measured offline and stored on the model version
-  (`offline_latency_overhead_ms`). The literal rule is one setting away:
-  `LATENCY_ALLOW_OFFLINE_OVERHEAD=0`.
+  (`offline_latency_overhead_ms`). The literal rule is one setting away: start a rollout with
+  `{"latency_allow_offline_overhead": false}`; we ran it, and a healthy v2 was rolled back at 1%
+  after 308 requests (p99 32 ms > limit 8.1 ms).
 * *Error rate.* The z-test is computed as required; because errors are rare (0.2%) and v2 sees few
-  requests at 1%, an exact binomial test must agree before a breach (`EXACT_CONFIRM=0` disables it).
+  requests at 1%, an exact binomial test must agree before a breach (`{"exact_confirm": false}`
+  disables it).
 * *PSI.* At 1% traffic v2 serves only ~100 patients and PSI cannot separate a healthy v2 from a
   buggy one (simulated false-alarm rate 67%), so it is evaluated from 5% traffic.
 * *Simulated background errors.* Both variants fail 0.2% of requests (`BASE_ERROR_RATE`), like a
@@ -138,8 +147,8 @@ src/p1/          features + encoder, data split, training, model service, router
                  controller, statistics, Prometheus client
 analysis/        report analyses (offline models, rollout timelines, Q1, PSI calibration, Q2)
 monitoring/      Prometheus config, Grafana provisioning and dashboard
-scripts/         scenario runner, dashboard generator, Grafana screenshots
+scripts/         scenario runner (+ .cmd launcher), dashboard generator, Grafana screenshots
 tests/           unit tests (statistics, sticky routing, silent schema bug)
-report/          report, slides and figures
+report/          report (MD, PDF), slides, figures, evidence (decision logs of every run)
 docs/            demo script and Q&A
 ```

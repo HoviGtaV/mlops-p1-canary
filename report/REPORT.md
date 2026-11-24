@@ -65,8 +65,9 @@ A breach must appear on **two consecutive checks**. Rollback = router weight 0; 
 Both variants have a simulated background error rate of 0.2% (a flaky dependency); without it v1
 has zero errors and the z-test has nothing to compare against.
 
-Three choices go beyond the literal subject. Each one came from a **real false rollback of a healthy
-v2** while tuning (5 of our first 6 healthy runs were rolled back):
+Three choices go beyond the literal subject. They were forced by measurements and by **real false
+rollbacks of a healthy v2** while tuning: 5 of our first 6 healthy runs were rolled back (error rate
+at 1%, PSI at 1%, latency at 1%, 25% and 100%; logs in `report/evidence/rollouts/tuning/`):
 
 1. **Latency allowance.** v2's p99 is ~30 ms against ~6 ms for v1 *by design*. The literal rule
    p99(v2) ≤ 1.1 × p99(v1) ≈ 7 ms rolls back every healthy v2 (100% in simulation). The extra cost
@@ -74,11 +75,15 @@ v2** while tuning (5 of our first 6 healthy runs were rolled back):
    with a 1.5 headroom because the idle offline benchmark under-estimates load (live p99 reached
    ~42 ms at 25% and 46 ms at 100% traffic). Limit ≈ 52 ms. Cost: a slowdown that keeps v2's p99
    under ~52 ms (+6 to +20 ms on top of its normal 30–46 ms) is not caught.
-   The literal rule remains a setting (`LATENCY_ALLOW_OFFLINE_OVERHEAD=0`).
+   The literal rule remains available: start a rollout with `{"latency_allow_offline_overhead": false}`.
+   Live check: with it, a healthy v2 was rolled back at 1% traffic after 308 requests (p99 32 ms >
+   limit 8.1 ms; log in `report/evidence/rollouts/literal_latency_rule/`).
 2. **Exact confirmation of the z-test.** One background error in 58 v2 requests gave a "significant"
    z-test (p < 0.01) and rolled back a healthy v2: the normal approximation fails with rare events
    and small samples. The exact binomial probability of that event is 11%. We keep the z-test and
-   require the exact test to agree.
+   require the exact test to agree. The same noise later made the *error* guardrail roll back a
+   schema-bug run at 1% before PSI could look; together with the ~85 checks per rollout, this is
+   why α was lowered to 0.001.
 3. **PSI from 5% traffic.** See below.
 
 **Why PSI starts at 5% and the threshold is 0.15.** At 1% traffic v2 serves only ~100 patients, so
@@ -99,8 +104,9 @@ random patient subsets:
 314 v2 requests. **Errors (5% HTTP 500).** Rolled back at 1% after 65 v2 requests (46 s): only
 about 65 patient requests were exposed. **Silent schema bug.** `number_inpatient` (past inpatient
 visits, the strongest predictor) is renamed upstream; the service imputes the missing column and
-answers HTTP 200. The error and latency guardrails never trigger a rollback (the error guardrail
-breached once from background noise, not twice in a row). Offline on the test split, the bug drops
+answers HTTP 200. The error and latency guardrails never breach (at the start of the 5% step one
+background error in 60 requests made the error gap reach 1.5 points, but the z-test p = 0.003 and
+the exact p = 0.10 are far from significant). Offline on the test split, the bug drops
 v2's mean predicted risk from 11.2% to 8.9% and its AUC from 0.663 to 0.623. Only the score PSI
 catches it: 0.187 at 5% traffic, after 957 v2 requests in total (411 at 1%, 546 at 5%).
 
@@ -108,7 +114,9 @@ catches it: 0.187 at 5% traffic, after 957 v2 requests in total (411 at 1%, 546 
 
 ![Schema bug timeline](figures/rollout_schema.png)
 
-Other evidence: `figures/grafana_{healthy,latency,errors}.png` and `figures/rollout_*.png`.
+Other evidence: `report/figures/grafana_{healthy,latency,errors}.png`, `report/figures/rollout_*.png`,
+and the decision log of every run (one JSON line per check, with every guardrail value) in
+`report/evidence/rollouts/`.
 
 ## 5. Report questions
 

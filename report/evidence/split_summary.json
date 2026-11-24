@@ -1,0 +1,20 @@
+{
+  "seed": 42,
+  "splits": {
+    "train": {
+      "encounters": 69623,
+      "patients": 48993,
+      "positive_rate": 0.1138
+    },
+    "val": {
+      "encounters": 14887,
+      "patients": 10498,
+      "positive_rate": 0.1153
+    },
+    "test": {
+      "encounters": 14833,
+      "patients": 10499,
+      "positive_rate": 0.1127
+    }
+  }
+}

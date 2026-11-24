@@ -263,7 +263,7 @@ s = content("Q1 · A 5% error rate is caught after ~65 requests", "Report questi
 card(s, 0.6, 1.55, 4.6, 5.1);
 text(s, "65", { x: 0.9, y: 1.75, w: 4.0, h: 1.3, fontSize: 72, bold: true, color: C.accent2, fontFace: THEME.headFontFace });
 text(s, "v2 requests before rollback, live, at 1% traffic (46 s)", { x: 0.9, y: 3.05, w: 4.0, h: 0.7, fontSize: 15, color: C.text1 });
-const q1 = [["47", "power formula, α = 0.001, 80% power"], ["67", "median of 4,000 simulated canaries"], ["548", "needed if the bug added only +1 point"]];
+const q1 = [["47", "power formula, α = 0.001, 80% power"], ["67", "median of 4,000 simulated canaries"], ["548", "power formula if the bug added only +1 point"]];
 q1.forEach((q, i) => {
   const y = 3.95 + i * 0.85;
   text(s, q[0], { x: 0.9, y, w: 1.1, h: 0.6, fontSize: 26, bold: true, color: C.accent1, fontFace: THEME.headFontFace, valign: "middle" });
@@ -342,7 +342,7 @@ pres.addSection({ title: "Conclusion" });
 s = pres.addSlide({ masterName: "CLOSING_DARK", sectionTitle: "Conclusion" });
 s.addText("What we take away", { placeholder: "title" });
 const take = [["Safe rollout works", "Healthy v2 reached 100%; each injected failure was stopped at 1% or 5% traffic by the right guardrail."],
-              ["Statistics set the rules", "Small samples and repeated checks caused 5 false rollbacks; each fix is measured in the report."],
+              ["Statistics set the rules", "Small samples and repeated checks caused 5 false rollbacks of a healthy v2; each fix is measured in the report."],
               ["Next step", "An A/B test on readmissions before promoting v2 to @champion, and drift alerts on input features."]];
 take.forEach((t, i) => {
   const x = 0.8 + i * 4.0;
@@ -352,8 +352,8 @@ take.forEach((t, i) => {
   text(s, t[0], { x: x + 0.3, y: 3.15, w: 3.15, h: 0.5, fontSize: 20, bold: true, color: "FFFFFF", fontFace: THEME.headFontFace });
   text(s, t[1], { x: x + 0.3, y: 3.75, w: 3.15, h: 1.25, fontSize: 15, color: "D6E8EB" });
 });
-text(s, "Questions? A live run of the error scenario takes under a minute.", { x: 0.8, y: 5.75, w: 11.7, h: 0.6, fontSize: 20, italic: true, color: "CFE3E6" });
-s.addNotes("Close on three points: the rollout mechanism works end to end; the statistics are what make it trustworthy, and our false alarms taught us that; and the next step is an A/B test before v2 becomes the champion. Then open the floor for questions, and offer a live run of the errors scenario, which takes under a minute.");
+text(s, "Questions? A live run of the error scenario takes about a minute and a half.", { x: 0.8, y: 5.75, w: 11.7, h: 0.6, fontSize: 20, italic: true, color: "CFE3E6" });
+s.addNotes("Close on three points: the rollout mechanism works end to end; the statistics are what make it trustworthy, and our false alarms taught us that; and the next step is an A/B test before v2 becomes the champion. Then open the floor for questions, and offer a live run of the errors scenario, which takes about a minute and a half.");
 
 (async () => {
   await pres.writeFile({ fileName: OUT });

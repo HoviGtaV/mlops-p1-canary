@@ -1,0 +1,55 @@
+{
+  "v1": {
+    "run_id": "48db3aa76441443186404fd57feb0ba9",
+    "metrics": {
+      "fit_seconds": 5.674896717071533,
+      "val_auc": 0.6633958125492557,
+      "val_avg_precision": 0.21322873882391713,
+      "val_brier": 0.09810289561836878,
+      "val_recall_top15": 0.29953379953379955,
+      "test_auc": 0.6534597380472754,
+      "test_avg_precision": 0.2106662477045245,
+      "test_brier": 0.09636109434587915,
+      "test_recall_top15": 0.3116028708133971,
+      "single_row_p50_ms": 0.9471294997638324,
+      "single_row_p99_ms": 2.4351978700542527
+    },
+    "version": "1"
+  },
+  "v2": {
+    "run_id": "e9ba44fc991d4f99a73977f4ff954e62",
+    "metrics": {
+      "fit_seconds": 4.944365978240967,
+      "val_auc": 0.6755627607024616,
+      "val_avg_precision": 0.22580632263409234,
+      "val_brier": 0.09714735703044085,
+      "val_recall_top15": 0.3129370629370629,
+      "test_auc": 0.6626350953902153,
+      "test_avg_precision": 0.2125245444810046,
+      "test_brier": 0.09595944296265972,
+      "test_recall_top15": 0.3104066985645933,
+      "single_row_p50_ms": 10.312151000107406,
+      "single_row_p99_ms": 29.544274550248687
+    },
+    "version": "2"
+  },
+  "offline_psi_v2_vs_v1": 0.013573750068357626,
+  "offline_latency_overhead_ms": 27.109076680194434,
+  "split_summary": {
+    "train": {
+      "encounters": 69623,
+      "patients": 48993,
+      "positive_rate": 0.1138
+    },
+    "val": {
+      "encounters": 14887,
+      "patients": 10498,
+      "positive_rate": 0.1153
+    },
+    "test": {
+      "encounters": 14833,
+      "patients": 10499,
+      "positive_rate": 0.1127
+    }
+  }
+}

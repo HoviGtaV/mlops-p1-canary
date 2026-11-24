@@ -47,8 +47,25 @@ agree.
 
 **Why alpha = 0.001 and not 0.05?**
 The controller checks every 5 seconds, about 85 times per healthy rollout. With 0.05 per check,
-false alarms add up (1 − 0.95⁸⁵ ≈ 99%). 0.05 / 85 ≈ 0.0006, rounded to 0.001 (Bonferroni idea). A real 5% error rate is so far from 0.2% that
-it is still caught after ~65 requests.
+false alarms add up (1 − 0.95⁸⁵ ≈ 99%). 0.05 / 85 ≈ 0.0006, rounded to 0.001 (Bonferroni idea).
+It also happened live: with α = 0.01, a schema-bug run was rolled back by the *error* guardrail,
+from background noise, before PSI could even look. A real 5% error rate is so far from 0.2% that it
+is still caught after ~65 requests.
+
+**In the schema-bug timeline the error gap crosses 1 point. Why no rollback?**
+At the start of the 5% step v2 had 1 error in 60 requests (gap 1.5 points) while v1 had 73 errors
+in 41,229. The gap alone is not a breach: the z-test gave p = 0.003 (above 0.001) and the exact
+test p = 0.10. In that whole run the error guardrail never breached.
+
+**Why is there a 0.2% background error rate?**
+It simulates a flaky dependency (`BASE_ERROR_RATE`), as in any real service. With zero errors on
+both variants the z-test has nothing to compare (its standard error is 0), and a single error on v2
+would be infinitely "significant".
+
+**Why compare v2 since the step started with v1 since the rollout started?**
+v2's numbers must describe the current step (current share of traffic and load). v1 gets ~99% of
+the traffic for the whole rollout, so its long history gives a precise baseline; and at 100% v1
+gets no traffic at all, so its baseline can only come from before.
 
 **What is PSI?**
 Population Stability Index: compares two histograms (here v2's predicted risk vs v1's) bin by bin:
@@ -72,6 +89,12 @@ accepted when v2 was approved, so we measured it offline (27 ms, stored as a tag
 version) and the limit is 1.1 × (v1's live p99 + 1.5 × 27 ms) ≈ 52 ms. The 1.5 factor is headroom
 because the offline benchmark runs on an idle CPU; under real load v2's p99 reached 42–46 ms.
 Trade-off: a slowdown that keeps v2's p99 under ~52 ms would not be caught.
+
+**Can you run the literal rule p99(v2) ≤ 1.1 × p99(v1)?**
+Yes, every controller setting can be overridden when a rollout starts:
+`Invoke-RestMethod -Method Post http://localhost:8090/rollout/start -ContentType "application/json" -Body '{"latency_allow_offline_overhead": false}'`.
+We ran it: a healthy v2 was rolled back by latency_p99 at 1% traffic after 308 requests (p99 32 ms
+against a limit of 8.1 ms), as the Q2 simulation predicts (100%).
 
 **Why does p99 need 300 requests?**
 The p99 of 100 requests is basically the single slowest one: very noisy. It caused a false rollback
@@ -117,6 +140,11 @@ dictionary lookups: v1 went from 54 ms to 1 ms per prediction.
 **How do metrics work with 8 processes?**
 `prometheus_client` multiprocess mode: each worker writes its counters to a shared folder and the
 `/metrics` endpoint adds them up when Prometheus scrapes.
+
+**Where is the evidence for your numbers?**
+`report/evidence/`: the decision log of every rollout in the report (one JSON line per check, with
+every guardrail value), the logs of the 13 tuning runs (including the 5 false rollbacks), and the
+training summary. `report/figures/*.json` hold the analysis results behind every figure.
 
 **What would you do next in a real hospital?**
 An A/B test (or a shadow deployment) to measure the effect on readmissions; alerting to a human on
