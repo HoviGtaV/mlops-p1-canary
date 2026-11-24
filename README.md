@@ -23,15 +23,18 @@ guardrails at every step from Prometheus, and rolls back automatically if one of
 
 ```mermaid
 flowchart LR
-    SIM[Traffic simulator<br/>replays test patients<br/>stable user_id] --> R[Router - FastAPI<br/>sticky hash of user_id<br/>weight w on B]
-    R -- 1-w --> A[variant-a<br/>loads @champion = v1]
-    R -- w --> B[variant-b<br/>loads @challenger = v2<br/>+ failure flags]
-    A & B -. load model .-> ML[(MLflow<br/>tracking + registry)]
-    R & A & B -- /metrics --> P[(Prometheus)]
-    P --> G[Grafana<br/>A and B side by side]
-    C[Rollout controller<br/>1% → 5% → 25% → 100%] -- PromQL API --> P
-    C -- set weight / rollback --> R
-    T[trainer] -- register v1, v2 + aliases --> ML
+    SIM["Traffic simulator<br/>replays test patients<br/>stable user_id"] --> R["Router (FastAPI)<br/>sticky hash of user_id<br/>weight w on B"]
+    R -->|"1 - w"| A["variant-a<br/>loads champion alias = v1"]
+    R -->|"w"| B["variant-b<br/>loads challenger alias = v2<br/>+ failure flags"]
+    A -.->|"load model"| ML[("MLflow<br/>tracking + registry")]
+    B -.->|"load model"| ML
+    R -->|"metrics"| P[("Prometheus")]
+    A -->|"metrics"| P
+    B -->|"metrics"| P
+    P --> G["Grafana<br/>A and B side by side"]
+    C["Rollout controller<br/>1, 5, 25, 100 percent"] -->|"PromQL API"| P
+    C -->|"set weight or rollback"| R
+    T["trainer"] -->|"register v1, v2 and aliases"| ML
 ```
 
 Every service runs in Docker Compose on a laptop CPU. Both variants run **the same image** and
