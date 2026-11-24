@@ -59,7 +59,7 @@ Split by `patient_nbr`, 70/15/15, seed 42: 69,623 / 14,887 / 14,833 encounters, 
 | Guardrail | Rule | Minimum v2 requests |
 |---|---|---|
 | error_rate | one-sided two-proportion z-test p < 0.001, gap ≥ 1 point, exact binomial test agrees | 50 |
-| latency_p99 | p99(v2) ≤ 1.1 × (p99(v1) + 1.5 × 27.1 ms) | 300 |
+| latency_p99 | p99(v2) ≤ 1.1 × (p99(v1) + 1.5 × 27.1 ms), ignoring the first 10 s after each weight change | 300 |
 | score_psi | PSI(v2 scores, v1 scores) ≤ 0.15, from 5% traffic | 500 |
 | invalid_scores | NaN / out-of-range share ≤ 0.1% | 20 |
 

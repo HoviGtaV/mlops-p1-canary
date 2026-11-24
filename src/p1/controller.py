@@ -87,6 +87,9 @@ class Settings:
     consecutive_breaches: int = int(os.getenv("CONSECUTIVE_BREACHES", "2"))
     min_n_error: int = int(os.getenv("MIN_N_ERROR", "50"))
     min_n_latency: int = int(os.getenv("MIN_N_LATENCY", "300"))
+    # Right after a weight change v2 receives a burst of new traffic (x4 at 25% -> 100%)
+    # and queues for a few seconds: latency is judged only after this settle time.
+    latency_settle_s: float = float(os.getenv("LATENCY_SETTLE_S", "10"))
     min_n_psi: int = int(os.getenv("MIN_N_PSI", "500"))
     min_n_invalid: int = int(os.getenv("MIN_N_INVALID", "20"))
 
@@ -175,8 +178,9 @@ class Rollout:
         n_a = sum(req_a.values())
         x_a = req_a.get(("a", "error"), 0.0)
 
-        lat_b = p.delta('sum by (variant, le) (router_request_seconds_bucket{variant="b"})',
-                        t_step, now, ("variant", "le"))
+        t_lat = t_step + self.s.latency_settle_s
+        lat_b = (p.delta('sum by (variant, le) (router_request_seconds_bucket{variant="b"})',
+                         t_lat, now, ("variant", "le")) if now > t_lat else {})
         lat_a = p.delta('sum by (variant, le) (router_request_seconds_bucket{variant="a"})',
                         t_rollout, now, ("variant", "le"))
         sc_b = p.delta('sum by (variant, le) (model_score_bucket{variant="b"})',
@@ -194,6 +198,7 @@ class Rollout:
         return {
             "n_b": n_b, "x_b": x_b, "n_a": n_a, "x_a": x_a,
             "p99_b": histogram_quantile(q, lb, lcb) if lb else float("nan"),
+            "n_lat_b": lcb[-1] if lb else 0.0,
             "p99_a": histogram_quantile(q, la, lca) if la else float("nan"),
             "scores_b": cumulative_to_bins(scb) if sb else [],
             "scores_a": cumulative_to_bins(sca) if sa else [],
@@ -214,7 +219,8 @@ class Rollout:
                 breach = breach and exact < s.alpha
             res["error_rate"] = {"value": diff, "threshold": s.min_error_diff, "p_value": pval,
                                  "exact_p_value": exact, "z": z, "breach": breach}
-        if n_b >= s.min_n_latency and m["p99_a"] == m["p99_a"] and m["p99_b"] == m["p99_b"]:
+        if (m.get("n_lat_b", n_b) >= s.min_n_latency
+                and m["p99_a"] == m["p99_a"] and m["p99_b"] == m["p99_b"]):
             limit = s.latency_ratio * (m["p99_a"] + self.latency_overhead_s)
             res["latency_p99"] = {"value": m["p99_b"], "threshold": limit,
                                   "v1": m["p99_a"], "breach": m["p99_b"] > limit}

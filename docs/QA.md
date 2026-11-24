@@ -96,6 +96,12 @@ Yes, every controller setting can be overridden when a rollout starts:
 We ran it: a healthy v2 was rolled back by latency_p99 at 1% traffic after 308 requests (p99 32 ms
 against a limit of 8.1 ms), as the Q2 simulation predicts (100%).
 
+**Why ignore latency for 10 s after each weight change?**
+Going from 25% to 100% sends v2 four times more traffic at once; for a few seconds requests queue.
+In one rehearsal on battery in Power saver mode, that burst gave a p99 of 96 ms in the first 10 s
+of the 100% step and rolled back a healthy v2. Real canary tools also wait a short warm-up before
+judging latency; errors and PSI still count from the first request.
+
 **Why does p99 need 300 requests?**
 The p99 of 100 requests is basically the single slowest one: very noisy. It caused a false rollback
 of a healthy v2. With 300 requests it rests on the ~3 slowest.

@@ -119,7 +119,7 @@ controller container, or a JSON override when a rollout is started.
 | Guardrail | Rule (shipped settings) | Catches |
 |---|---|---|
 | error_rate | one-sided two-proportion **z-test**, p < 0.001 **and** gap ≥ 1 point, confirmed by an exact binomial test (from 50 v2 requests) | random HTTP 500s |
-| latency_p99 | p99(v2) ≤ 1.1 × (p99(v1) + 1.5 × v2's offline extra cost), end to end (from 300 v2 requests) | extra latency |
+| latency_p99 | p99(v2) ≤ 1.1 × (p99(v1) + 1.5 × v2's offline extra cost), end to end (from 300 v2 requests, ignoring the first 10 s after each weight change) | extra latency |
 | score_psi | PSI(v2 scores vs v1 scores) ≤ 0.15, from the 5% step and 500 v2 requests | silent schema bug |
 | invalid_scores | share of NaN / out-of-range scores ≤ 0.1% | broken model output |
 
